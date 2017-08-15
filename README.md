@@ -1,6 +1,6 @@
 # Qu3e-Sharp
 
-Qu3e-Sharp is a unofficial C# ported version of @RandyGaul's [Qu3e Physics Engine](https://github.com/RandyGaul/qu3e)
+Qu3e-Sharp is a unofficial C# ported version of RandyGaul's [Qu3e Physics Engine](https://github.com/RandyGaul/qu3e)
 
 The aim for this repository is to provide an easy library for those who need a simple physics engine that run using C# back-end. The product of this repository is a managed, portable library that independent of any reference (other than mscorlib.dll) so it can be used by many programs with C# back-ends like .NET Core, XNA, Unity, etc.
 
@@ -50,7 +50,7 @@ Note that this doesn't mean I won't contribute anything back to the original. If
 
 This repository has a demo in WPF application. So far the demo doesn't implement Common/Render.cs yet.
 
-![Screenshot](screenshots\WPFDemo.gif)
+![Screenshot](screenshots/WPFDemo.gif)
 
 ## More Information
 
