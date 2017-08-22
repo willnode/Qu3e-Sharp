@@ -51,12 +51,10 @@ namespace Qu3e
         public Vec3 position;          // World coordinate of contact
         public double penetration;         // Depth of penetration from collision
         public double normalImpulse;           // Accumulated normal impulse
-        public double tangentImpulse;   // Accumulated friction impulse
-        public double bitangentImpulse;   // Accumulated friction impulse
-        public double bias;                    // Restitution + baumgarte
-        public double normalMass;              // Normal constraint mass
-        public double tangentMass;      // Tangent constraint mass
-        public double bitangentMass;      // Tangent constraint mass
+        public double[] tangentImpulse = new double[2];   // Accumulated friction impulse
+        // public double bias;                    // Restitution + baumgarte
+        // public double normalMass;              // Normal constraint mass
+        // public double[] tangentMass = new double[2];      // Tangent constraint mass
         public FeaturePair fp;         // Features on A and B for this contact
         public byte warmStarted;               // Used for debug rendering
     };
@@ -76,14 +74,10 @@ namespace Qu3e
         public Box B;
 
         public Vec3 normal;                // From A to B
-        public Vec3 tangentVectors; // Tangent vectors
-        public Vec3 bitangentVectors; // Tangent vectors
+        public Vec3[] tangentVectors = new Vec3[2]; // Tangent vectors
         public Contact[] contacts = new Contact[8];
         public int contactCount;
-
-        public Manifold next;
-        public Manifold prev;
-
+        
         public bool sensor;
 
         public Manifold ()
@@ -107,7 +101,7 @@ namespace Qu3e
         {
             manifold.contactCount = 0;
 
-            Collide.BoxtoBox(manifold, A, B);
+            Collide.ComputeCollision(manifold, A, B);
 
             if (manifold.contactCount > 0)
             {

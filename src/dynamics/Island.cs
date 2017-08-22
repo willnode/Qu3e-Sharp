@@ -172,8 +172,8 @@ namespace Qu3e
                 c.indexA = cc.bodyA.IslandIndex;
                 c.indexB = cc.bodyB.IslandIndex;
                 c.normal = cc.manifold.normal;
-                c.tangentVectors = cc.manifold.tangentVectors;
-                c.bitangentVectors = cc.manifold.bitangentVectors;
+                c.tangentVectors[0] = cc.manifold.tangentVectors[0];
+                c.tangentVectors[1] = cc.manifold.tangentVectors[1];
                 c.contactCount = cc.manifold.contactCount;
 
                 for (int j = 0; j < c.contactCount; ++j)
@@ -184,8 +184,8 @@ namespace Qu3e
                     s.rb = cp.position - c.centerB;
                     s.penetration = cp.penetration;
                     s.normalImpulse = cp.normalImpulse;
-                    s.tangentImpulse = cp.tangentImpulse;
-                    s.bitangentImpulse = cp.bitangentImpulse;
+                    s.tangentImpulse[0] = cp.tangentImpulse[0];
+                    s.tangentImpulse[1] = cp.tangentImpulse[1];
                 }
             }
         }
