@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine - C# Version 1.01
+    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -57,44 +57,58 @@ namespace Qu3e
     public class Body
     {
 
-        // Adds a box to this body. Boxes are all defined in local space
-        // of their owning body. Boxes cannot be defined relative to one
+        // Adds a shape to this body. Shapes are all defined in local space
+        // of their owning body. Shapes cannot be defined relative to one
         // another. The body will recalculate its mass values. No contacts
         // will be created until the next Scene::Step( ) call.
-        public Box AddBox(BoxDef def)
+        public Shape AddShape(ShapeDef def)
         {
             AABB aabb;
-            Box box = new Box()
+            Shape shape = null;
+
+            switch (def.Type)
             {
-                local = def.Tx,
-                e = def.E,
-                body = this,
-                friction = def.Friction,
-                restitution = def.Restitution,
-                density = def.Density,
-                sensor = def.Sensor,
-            };
+                case ShapeType.Box:
+                    shape = new Box() { extent = def.Size / 2.0 };
+                    break;
+                case ShapeType.Sphere:
+                    shape = new Sphere() { radius = Vec3.MinPerElem(def.Size) / 2.0 };
+                    break;
+                case ShapeType.Capsule:
+                    Capsule cap = new Capsule();
+                    cap.radius = Vec3.MinPerElem(def.Size) / 2.0;
+                    cap.extent = Vec3.MaxPerElem(def.Size) / 2.0 - cap.radius;
+                    shape = cap;
+                    break;
+            }
+
+            shape.local = def.Tx;
+            shape.body = this;
+            shape.friction = def.Friction;
+            shape.restitution = def.Restitution;
+            shape.density = def.Density;
+            shape.sensor = def.Sensor;
             
-            Boxes.Add(box);
-            box.ComputeAABB(Tx, out aabb);
+            Shapes.Add(shape);
+            shape.ComputeAABB(Tx, out aabb);
 
             CalculateMassData();
 
-            Scene.ContactManager.Broadphase.InsertBox(box, aabb);
-            Scene.NewBox = true;
+            Scene.ContactManager.Broadphase.InsertShape(shape, aabb);
+            Scene.NewShape = true;
 
-            return box;
+            return shape;
         }
 
-        // Removes this box from the body and broadphase. Forces the body
+        // Removes this shape from the body and broadphase. Forces the body
         // to recompute its mass if the body is dynamic. Frees the memory
-        // pointed to by the box pointer.
-        public void RemoveBox(Box box)
+        // pointed to by the shape pointer.
+        public void RemoveShape(Shape shape)
         {
-            Assert(box != null);
-            Assert(box.body == this);
+            Assert(shape != null);
+            Assert(shape.body == this);
 
-            bool found = Boxes.Remove(box);
+            bool found = Shapes.Remove(shape);
 
             // This shape was not connected to this body.
             Assert(found);
@@ -104,27 +118,27 @@ namespace Qu3e
             {
                 ContactConstraint contact = edge.constraint;
 
-                Box A = contact.A;
-                Box B = contact.B;
+                Shape A = contact.A;
+                Shape B = contact.B;
 
-                if (box == A || box == B)
+                if (shape == A || shape == B)
                     Scene.ContactManager.RemoveContact(contact);
 
             }
 
-            Scene.ContactManager.Broadphase.RemoveBox(box);
+            Scene.ContactManager.Broadphase.RemoveShape(shape);
 
             CalculateMassData();
 
-            // Scene.Heap.Free((void)box);
+            // Scene.Heap.Free((void)shape);
         }
 
         // Removes all boxes from this body and the broadphase.
-        public void RemoveAllBoxes()
+        public void RemoveAllShapes()
         {
-            foreach (var box in Boxes)
+            foreach (var shape in Shapes)
             {
-                Scene.ContactManager.Broadphase.RemoveBox(box);
+                Scene.ContactManager.Broadphase.RemoveShape(shape);
             }
 
             Scene.ContactManager.RemoveContactsFromBody(this);
@@ -328,80 +342,12 @@ namespace Qu3e
         {
             bool awake = IsAwake();
             
-            foreach (var box in Boxes)
+            foreach (var shape in Shapes)
             {
-                box.Render(Tx, awake, render);
+                shape.Render(Tx, awake, render);
             }
         }
-
         
-        // Dump this rigid body and its shapes into a log file. The log can be
-        // used as C++ code to re-create an initial scene setup.
-        public void Dump(StringBuilder file, int index)
-        {
-            file.AppendFormat( "{{\n");
-            file.AppendFormat( "\tq3BodyDef bd;\n");
-
-            switch (Flags & (eStatic | eDynamic | eKinematic))
-            {
-                case eStatic:
-                    file.AppendFormat( "\tbd.bodyType = BodyType( {0} );\n", eStaticBody);
-                    break;
-
-                case eDynamic:
-                    file.AppendFormat( "\tbd.bodyType = BodyType( {0} );\n", eDynamicBody);
-                    break;
-
-                case eKinematic:
-                    file.AppendFormat( "\tbd.bodyType = BodyType( {0} );\n", eKinematicBody);
-                    break;
-            }
-
-            file.AppendFormat( "\tbd.position.Set( ( {0} ), ( {1} ), ( {2} ) );\n", Tx.position.x, Tx.position.y, Tx.position.z);
-            Vec3 axis;
-            double angle;
-            Q.ToAxisAngle(out axis,out angle);
-            file.AppendFormat( "\tbd.axis.Set( ( {0} ), ( {1} ), ( {2} ) );\n", axis.x, axis.y, axis.z);
-            file.AppendFormat( "\tbd.angle = ( {0} );\n", angle);
-            file.AppendFormat( "\tbd.linearVelocity.Set( ( {0} ), ( {1} ), ( {2} ) );\n", LinearVelocity.x, LinearVelocity.y, LinearVelocity.z);
-            file.AppendFormat( "\tbd.angularVelocity.Set( ( {0} ), ( {1} ), ( {2} ) );\n", AngularVelocity.x, AngularVelocity.y, AngularVelocity.z);
-            file.AppendFormat( "\tbd.gravityScale = ( {0} );\n", GravityScale);
-            file.AppendFormat("\tbd.layers = {0} Layers);\n", Layers );
-            file.AppendFormat( "\tbd.allowSleep = Bool( {0} );\n", Flags & eAllowSleep);
-            file.AppendFormat( "\tbd.awake = Bool( {0} );\n", Flags & eAwake);
-            file.AppendFormat( "\tbd.awake = Bool( {0} );\n", Flags & eAwake);
-            file.AppendFormat( "\tbd.lockAxisX = Bool( {0} );\n", Flags & eLockAxisX);
-            file.AppendFormat( "\tbd.lockAxisY = Bool( {0} );\n", Flags & eLockAxisY);
-            file.AppendFormat( "\tbd.lockAxisZ = Bool( {0} );\n", Flags & eLockAxisZ);
-            file.AppendFormat( "\tbodies[ {0} ] = scene.CreateBody( bd );\n\n", index);
-
-            foreach (var box in Boxes)
-            {
-                file.AppendFormat( "\t{{\n");
-                file.AppendFormat( "\t\tq3BoxDef sd;\n");
-                file.AppendFormat( "\t\tsd.SetFriction( ( {0} ) );\n", box.friction);
-                file.AppendFormat( "\t\tsd.SetRestitution( ( {0} ) );\n", box.restitution);
-                file.AppendFormat( "\t\tsd.SetDensity( ( {0} ) );\n", box.density);
-                var sensor = box.sensor;
-                file.AppendFormat( "\t\tsd.SetSensor( Bool( {0} ) );\n", sensor);
-                file.AppendFormat( "\t\tq3Transform boxTx;\n");
-                Transform boxTx = box.local;
-                Vec3 xAxis = boxTx.rotation.ex;
-                Vec3 yAxis = boxTx.rotation.ey;
-                Vec3 zAxis = boxTx.rotation.ez;
-                file.AppendFormat( "\t\tq3Vec3 XAxis( ( {0} ), ( {1} ), ( {2} ) );\n", xAxis.x, xAxis.y, xAxis.z);
-                file.AppendFormat( "\t\tq3Vec3 YAxis( ( {0} ), ( {1} ), ( {2} ) );\n", yAxis.x, yAxis.y, yAxis.z);
-                file.AppendFormat( "\t\tq3Vec3 ZAxis( ( {0} ), ( {1} ), ( {2} ) );\n", zAxis.x, zAxis.y, zAxis.z);
-                file.AppendFormat( "\t\tboxTx.rotation.SetRows( xAxis, yAxis, zAxis );\n");
-                file.AppendFormat( "\t\tboxTx.position.Set( ( {0} ), ( {1} ), ( {2} ) );\n", boxTx.position.x, boxTx.position.y, boxTx.position.z);
-                file.AppendFormat( "\t\tsd.Set( boxTx, Vec3( ( {0} ), ( {1} ), ( {2} ) ) );\n", box.e.x * 2.0f, box.e.y * 2.0f, box.e.z * 2.0f);
-                file.AppendFormat( "\t\tbodies[ {0} ].AddBox( sd );\n", index);
-                file.AppendFormat( "\t}}\n");
-            }
-
-            file.AppendFormat( "}}\n\n");
-        }
-
         public double GetMass()
         {
             return Mass;
@@ -428,11 +374,9 @@ namespace Qu3e
         internal int Layers;
         internal BodyFlags Flags;
 
-        internal List<Box> Boxes;
+        internal List<Shape> Shapes;
         internal object UserData;
         internal Scene Scene;
-        //internal Body Next;
-        //internal Body Prev;
         internal int IslandIndex;
 
         internal double LinearDamping;
@@ -442,10 +386,6 @@ namespace Qu3e
 
         public Body(BodyDef def, Scene scene)
         {
-            LinearVelocity = def.linearVelocity;
-            AngularVelocity = def.angularVelocity;
-            Vec3.Identity(ref Force);
-            Vec3.Identity(ref Torque);
             Q.Set(Vec3.Normalize(def.axis), def.angle);
             Tx.rotation = Q.ToMat3();
             Tx.position = def.position;
@@ -454,47 +394,27 @@ namespace Qu3e
             Layers = def.layers;
             UserData = def.userData;
             Scene = scene;
-            Flags = 0;
             LinearDamping = def.linearDamping;
             AngularDamping = def.angularDamping;
 
-            if (def.bodyType == eDynamicBody)
-                Flags |= eDynamic;
+            Flags = def.GetFlags();
 
+            if ((Flags & eStatic) > 0)
+            {
+                Vec3.Identity(ref LinearVelocity);
+                Vec3.Identity(ref AngularVelocity);
+                Vec3.Identity(ref Force);
+                Vec3.Identity(ref Torque);
+            }
             else
             {
-                if (def.bodyType == eStaticBody)
-                {
-                    Flags |= eStatic;
-                    Vec3.Identity(ref LinearVelocity);
-                    Vec3.Identity(ref AngularVelocity);
-                    Vec3.Identity(ref Force);
-                    Vec3.Identity(ref Torque);
-                }
-
-                else if (def.bodyType == eKinematicBody)
-                    Flags |= eKinematic;
+                Vec3.Identity(ref Force);
+                Vec3.Identity(ref Torque);
+                LinearVelocity = def.linearVelocity;
+                AngularVelocity = def.angularVelocity;
             }
 
-            if (def.allowSleep)
-                Flags |= eAllowSleep;
-
-            if (def.awake)
-                Flags |= eAwake;
-
-            if (def.active)
-                Flags |= eActive;
-
-            if (def.lockAxisX)
-                Flags |= eLockAxisX;
-
-            if (def.lockAxisY)
-                Flags |= eLockAxisY;
-
-            if (def.lockAxisZ)
-                Flags |= eLockAxisZ;
-
-            Boxes = new List<Box>();
+            Shapes = new List<Shape>();
             ContactList = new List<ContactEdge>();
         }
 
@@ -517,13 +437,13 @@ namespace Qu3e
             Vec3 lc = new Vec3();
             Vec3.Identity(ref lc);
 
-            foreach (var box in Boxes)
+            foreach (var shape in Shapes)
             {
-                if (box.density == 0)
+                if (shape.density == 0)
                     continue;
 
                 MassData md;
-                box.ComputeMass(out md);
+                shape.ComputeMass(out md);
                 mass += md.mass;
                 inertia += md.inertia;
                 lc += md.center * md.mass;
@@ -566,10 +486,10 @@ namespace Qu3e
             AABB aabb;
             Transform tx = Tx;
 
-            foreach (var box in Boxes)
+            foreach (var shape in Shapes)
             {
-                box.ComputeAABB(tx, out aabb);
-                broadphase.Update(box.broadPhaseIndex, aabb);
+                shape.ComputeAABB(tx, out aabb);
+                broadphase.Update(shape.broadPhaseIndex, aabb);
             }
         }
     }
@@ -628,6 +548,44 @@ namespace Qu3e
         public bool lockAxisX;     // Locked rotation on the x axis.
         public bool lockAxisY;     // Locked rotation on the y axis.
         public bool lockAxisZ;     // Locked rotation on the z axis.
+
+        public BodyFlags GetFlags ()
+        {
+            BodyFlags Flags = 0;
+            if (bodyType == eDynamicBody)
+                Flags |= eDynamic;
+
+            else
+            {
+                if (bodyType == eStaticBody)
+                {
+                    Flags |= eStatic;
+                }
+
+                else if (bodyType == eKinematicBody)
+                    Flags |= eKinematic;
+            }
+
+            if (allowSleep)
+                Flags |= eAllowSleep;
+
+            if (awake)
+                Flags |= eAwake;
+
+            if (active)
+                Flags |= eActive;
+
+            if (lockAxisX)
+                Flags |= eLockAxisX;
+
+            if (lockAxisY)
+                Flags |= eLockAxisY;
+
+            if (lockAxisZ)
+                Flags |= eLockAxisZ;
+
+            return Flags;
+        }
     };
 
 }

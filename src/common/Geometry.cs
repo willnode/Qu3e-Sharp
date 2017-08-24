@@ -35,22 +35,12 @@ namespace Qu3e
         public Vec3 min;
         public Vec3 max;
 
-        // http://box2d.org/2014/02/computing-a-basis/
-        public static void ComputeBasis(Vec3 a, ref Vec3 b, ref Vec3 c)
+        public AABB (Vec3 min, Vec3 max)
         {
-            // Suppose vector a has all equal components and is a unit vector: a = (s, s, s)
-            // Then 3*s*s = 1, s = sqrt(1/3) = 0.57735027. This means that at least one component of a
-            // unit vector must be greater or equal to 0.57735027. Can use SIMD select operation.
-
-            if (Math.Abs(a.x) >= (0.57735027))
-                b.Set(a.y, -a.x, 0);
-            else
-                b.Set(0, a.z, -a.y);
-
-            b = Vec3.Normalize(b);
-            c = Vec3.Cross(a, b);
+            this.min = min;
+            this.max = max;
         }
-
+        
         public static bool AABBtoAABB(AABB a, AABB b)
         {
             if (a.max.x < b.min.x || a.min.x > b.max.x)
@@ -110,6 +100,24 @@ namespace Qu3e
             return c;
         }
 
+        public Vec3 Clip(Vec3 t)
+        {
+            Vec3 center = (min + max) * 0.5;
+            Vec3 extent = (max - min) * 0.5;
+
+            t = t - center;
+            for (int i = 0; i < 3; i++)
+            {
+                t[i] = Clamp(-extent[i], extent[i], t[i]);
+                /*
+                double a = Math.Abs(t[i]);
+                double e = extent[i];
+                if (a > e)
+                    t = t * e / a;
+                    */
+            }
+            return t + center;
+        }
     };
 
     public struct HalfSpace
@@ -150,17 +158,23 @@ namespace Qu3e
         public Vec3 normal;
         public double distance;
     }
+
     //--------------------------------------------------------------------------------------------------
     // RaycastData
     //--------------------------------------------------------------------------------------------------
     public struct RaycastData
     {
-        public Vec3 start;   // Beginning point of the ray
-        public Vec3 dir;     // Direction of the ray (normalized)
-        public double t;          // Time specifying ray endpoint
+        // Beginning point of the ray
+        public Vec3 start;
+        // Direction of the ray (normalized)
+        public Vec3 dir;
+        // Time specifying ray endpoint
+        public double t;
 
-        public double toi;        // Solved time of impact
-        public Vec3 normal;	// Surface normal at impact
+        // Solved time of impact
+        public double toi;
+        // Surface normal at impact
+        public Vec3 normal;	
 
         public void Set(Vec3 startPoint, Vec3 direction, double endPointTime)
         {

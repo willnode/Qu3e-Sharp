@@ -29,18 +29,19 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="broadphase\BroadPhase.cs" />
     <Compile Include="broadphase\DynamicAABBTree.cs" />
+    <Compile Include="collision\Algorithm.cs" />
     <Compile Include="collision\Box.cs" />
+    <Compile Include="collision\Capsule.cs" />
     <Compile Include="collision\Collide.cs" />
+    <Compile Include="collision\Shape.cs" />
+    <Compile Include="collision\Sphere.cs" />
     <Compile Include="common\Geometry.cs" />
+    <Compile Include="common\Memory.cs" />
     <Compile Include="common\Settings.cs" />
-    <Compile Include="debug\Render.cs" />
+    <Compile Include="common\Render.cs" />
     <Compile Include="dynamics\Body.cs" />
     <Compile Include="dynamics\Contact.cs" />
     <Compile Include="dynamics\ContactManager.cs" />
@@ -51,6 +52,9 @@
     <Compile Include="math\Transform.cs" />
     <Compile Include="math\Vec3.cs" />
     <Compile Include="scene\Scene.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

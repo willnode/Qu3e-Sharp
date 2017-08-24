@@ -21,20 +21,18 @@ Changes that make this repository different than the original:
 #### Value types:
 
 - Double precision is used for all 'r32' values
-- Common/small classes like Vec3, Mat3, Quaternion, Transform is a struct.
-- All void* values is an arbitrary Object class.
-- FILE type for scene dumping is replaced with StringBuilder
 
 #### Built-in Libraries & Referencing styles:
 
 - Changed (nearly) all std math functions to System.Math
 - (nearly) all arrays, including linked classes are replaced with List<T>
 - Common/Settings.cs is a special static class and the rest of code is referencing it by 'using static' (C# 6.0 feature), therefore some static functions also moved there.
+- Removed Scene Dumping
 
 #### Caching and memory Management:
 
-- MemoryAllocator, Page, Stacks is removed because C# is a managed language.
-- All temporary arrays inside functions is moved out to prevent memory garbage.
+- Memory management is handled differently (See Common/Memory)
+- All temporary arrays inside functions are moved out to prevent memory garbage.
 - Island variable inside Step() in Scene is no longer be a temporary variable
 - Because of frequent allocations, ContactState and ContactConstraintState has it's own memory management inside it's own class.
 
@@ -43,12 +41,14 @@ Changes that make this repository different than the original:
 This repository does also and will made some improvement outside the original. Some features of that include:
 
 - Variable delta time
+- Sphere & Capsule Collision
+- Algorithm necessary for Convex collisions
 
 Note that this doesn't mean I won't contribute anything back to the original. If you want to contribute, consider to do that in original repo if you can write C++.
 
 ## Demo
 
-This repository has a demo in WPF application. So far the demo doesn't implement Common/Render.cs yet.
+This repository has a demo in WPF application. The demo doesn't implement Common/Render.cs.
 
 ![Screenshot](screenshots/WPFDemo.gif)
 

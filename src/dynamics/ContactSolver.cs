@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine - C# Version 1.01
+    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -43,27 +43,6 @@ namespace Qu3e
         static public ContactState Allocate() { return heap.Pop(); }
         static public void Free(ContactState instance) { heap.Push(instance); }
     };
-
-    // Pseudo Stack implementation
-    internal class Stack<T> : List<T> where T : new()
-    {
-        public T Pop ()
-        {
-            if (Count == 0)
-                return new T();
-            else
-            {
-                var r = this[Count - 1];
-                RemoveAt(Count - 1);
-                return r;
-            }
-        }
-
-        public void Push(T t)
-        {
-            Add(t);
-        }
-    }
 
     public class ContactConstraintState
     {
@@ -114,9 +93,7 @@ namespace Qu3e
                 }
             }
         }
-
-        static double Invert (double i) {return i == 0 ? 0 : 1 / i; }
-        static double Clamp (double a, double b, double t) { if (t < a) return a; if (t > b) return b; return t; }
+        
         public void PreSolve(double dt)
         {
             for (int i = 0; i < Contacts.Count; ++i)

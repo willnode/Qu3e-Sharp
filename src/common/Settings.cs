@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine - C# Version 1.01
+    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -44,23 +44,55 @@ namespace Qu3e
 
         public static void Assert(bool condition)
         {
-            if (!condition) throw new Exception("Assert results in false condition");
+            if (!condition) throw new ArgumentException("Assert results in false condition");
             // System.Diagnostics.Debug.Assert(condition);
         }
 
         // Restitution mixing. The idea is to use the maximum bounciness, so bouncy
         // objects will never not bounce during collisions.
-        public static double MixRestitution(Box A, Box B)
+        public static double MixRestitution(Shape A, Shape B)
         {
             return Math.Max(A.restitution, B.restitution);
         }
 
         // Friction mixing. The idea is to allow a very low friction value to
         // drive down the mixing result. Example: anything slides on ice.
-        public static double MixFriction(Box A, Box B)
+        public static double MixFriction(Shape A, Shape B)
         {
             return Math.Sqrt(A.friction * B.friction);
         }
+
+
+        //--------------------------------------------------------------------------------------------------
+        // Internal Utilities that C++ have but C# don't
+        //--------------------------------------------------------------------------------------------------
+
+        internal static void Swap<T>(ref T l, ref T r)
+        {
+            var tmp = l;
+            l = r;
+            r = tmp;
+        }
+
+        internal static void Chain<T>(T a, ref T b, ref T c)
+        {
+            c = b;
+            b = a;
+        }
+
+        internal static void Chain<T>(T a, ref T b, ref T c, ref T d)
+        {
+            d = c;
+            c = b;
+            b = a;
+        }
+
+        internal static double Sign(double v) { return v >= 0 ? 1 : -1; }
+
+        internal static double Invert(double i) { return i == 0 ? 0 : 1 / i; }
+
+        internal static double Clamp(double a, double b, double t) { if (t < a) return a; if (t > b) return b; return t; }
+
 
     }
 }

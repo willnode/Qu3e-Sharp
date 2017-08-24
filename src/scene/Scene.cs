@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine - C# Version 1.01
+    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -53,16 +53,15 @@ namespace Qu3e
 
     public class Scene
     {
-        public Scene(double dt, Vec3 gravity, int iterations = 20)
+        public Scene(Vec3 gravity, int iterations = 20)
         {
             ContactManager = new ContactManager();
             Island = new Island();
 
             Bodies = new List<Body>();
             Gravity = (gravity);
-            Dt = (dt);
             Iterations = (iterations);
-            NewBox = (false);
+            NewShape = (false);
             AllowSleep = (true);
             EnableFriction = (true);
         }
@@ -74,10 +73,10 @@ namespace Qu3e
         // timestep is not supported.
         public void Step(double Dt)
         {
-            if (NewBox)
+            if (NewShape)
             {
                 ContactManager.Broadphase.UpdatePairs();
-                NewBox = false;
+                NewShape = false;
             }
 
             ContactManager.TestCollisions();
@@ -92,7 +91,6 @@ namespace Qu3e
             Island.Iterations = Iterations;
 
             // Build each active Island and then solve each built Island
-//            int stackSize = Bodies.Count;
             foreach (var seed in Bodies)
             {
                 // Seed cannot be apart of an Island already
@@ -219,22 +217,19 @@ namespace Qu3e
         // all shapes and contacts associated and attached to this body.
         public void RemoveBody(Body body)
         {
-           
-
             ContactManager.RemoveContactsFromBody(body);
 
-            body.RemoveAllBoxes();
+            body.RemoveAllShapes();
 
             // Remove body from scene Bodies
             Assert(Bodies.Remove(body));
         }
+
         public void RemoveAllBodies()
         {
-
-
             foreach (var body in Bodies)
             {
-                body.RemoveAllBoxes();
+                body.RemoveAllShapes();
             }
             Bodies.Clear();
         }
@@ -359,7 +354,7 @@ namespace Qu3e
             {
                 Box box = (Box)broadPhase.Tree.GetUserData(id);
 
-                if (box.Raycast(box.body.GetTransform(), RayCast))
+                if (box.Raycast(box.body.GetTransform(), ref RayCast))
                 {
                     return cb.ReportShape(box);
                 }
@@ -412,40 +407,14 @@ namespace Qu3e
             ContactManager.Broadphase.Tree.Query(wrapper, rayCast);
         }
 
-        // Dump all rigid bodies and shapes into a log file. The log can be
-        // used as C++ code to re-create an initial scene setup. Contacts
-        // are *not* logged, meaning any cached resolution solutions will
-        // not be saved to the log file. This means the log file will be most
-        // accurate when dumped upon scene initialization, instead of mid-
-        // simulation.
-        public void Dump(StringBuilder file)
-        {
-            file.Length = 0;
-            file.AppendFormat("// Ensure 64/32-bit memory compatability with the dump contents\n");
-            file.AppendFormat("scene.SetGravity( Vec3( {0}, {1}, {2} ) );\n", Gravity.x, Gravity.y, Gravity.z);
-            file.AppendFormat("scene.SetAllowSleep( {0} );\n", AllowSleep ? "true" : "false");
-            file.AppendFormat("scene.SetEnableFriction( {0} );\n", EnableFriction ? "true" : "false");
-
-            file.AppendFormat("Body bodies = (Body)Alloc( Sizeof( Body ) * {0} );\n", Bodies.Count);
-
-            int i = 0;
-            foreach (var body in Bodies)
-            {
-                body.Dump(file, i);
-            }
-
-            file.AppendFormat("Free( bodies );\n");
-        }
-
         internal ContactManager ContactManager;
 
         internal List<Body> Bodies;
 
         internal Vec3 Gravity;
-        internal double Dt;
         internal int Iterations;
 
-        internal bool NewBox;
+        internal bool NewShape;
         internal bool AllowSleep;
         internal bool EnableFriction;
 

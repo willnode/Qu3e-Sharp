@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine - C# Version 1.01
+    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -24,459 +24,14 @@
 using System;
 using System.Collections.Generic;
 using static Qu3e.Settings;
+using static Qu3e.Algorithms;
+
 
 namespace Qu3e
 {
     public static class Collide
     {
-        public static bool TrackFaceAxis(ref int axis, int n, double s, ref double sMax, Vec3 normal, ref Vec3 axisNormal)
-        {
-            if (s > 0)
-                return true;
-
-            if (s > sMax)
-            {
-                sMax = s;
-                axis = n;
-                axisNormal = normal;
-            }
-
-            return false;
-        }
-
-        //--------------------------------------------------------------------------------------------------
-        public static bool TrackEdgeAxis(ref int axis, int n, double s,ref double sMax, Vec3 normal,ref Vec3 axisNormal)
-        {
-            if (s > 0)
-                return true;
-
-            double l = 1 / Vec3.Length(normal);
-            s *= l;
-
-            if (s > sMax)
-            {
-                sMax = s;
-                axis = n;
-                axisNormal = normal * l;
-            }
-
-            return false;
-        }
-
-        //--------------------------------------------------------------------------------------------------
-        public struct ClipVertex
-        {
-            /*
-            public ClipVertex()
-            {
-                f.key = ~0;
-            }
-            */
-
-            public Vec3 v;
-            public FeaturePair f;
-        };
-
-        //--------------------------------------------------------------------------------------------------
-        public static void ComputeReferenceEdgesAndBasis(Vec3 eR, Transform rtx, Vec3 n, int axis, byte[] result, out Mat3 basis, out Vec3 e)
-        {
-            basis = new Mat3();
-            e = new Vec3();
-
-            n = Transform.MulT(rtx.rotation, n);
-
-            if (axis >= 3)
-                axis -= 3;
-
-            switch (axis)
-            {
-                case 0:
-                    if (n.x > 0)
-                    {
-                        result[0] = 1;
-                        result[1] = 8;
-                        result[2] = 7;
-                        result[3] = 9;
-
-                        e.Set(eR.y, eR.z, eR.x);
-                        basis.SetRows(rtx.rotation.ey, rtx.rotation.ez, rtx.rotation.ex);
-                    }
-
-                    else
-                    {
-                        result[0] = 11;
-                        result[1] = 3;
-                        result[2] = 10;
-                        result[3] = 5;
-
-                        e.Set(eR.z, eR.y, eR.x);
-                        basis.SetRows(rtx.rotation.ez, rtx.rotation.ey, -rtx.rotation.ex);
-                    }
-                    break;
-
-                case 1:
-                    if (n.y > 0)
-                    {
-                        result[0] = 0;
-                        result[1] = 1;
-                        result[2] = 2;
-                        result[3] = 3;
-
-                        e.Set(eR.z, eR.x, eR.y);
-                        basis.SetRows(rtx.rotation.ez, rtx.rotation.ex, rtx.rotation.ey);
-                    }
-
-                    else
-                    {
-                        result[0] = 4;
-                        result[1] = 5;
-                        result[2] = 6;
-                        result[3] = 7;
-
-                        e.Set(eR.z, eR.x, eR.y);
-                        basis.SetRows(rtx.rotation.ez, -rtx.rotation.ex, -rtx.rotation.ey);
-                    }
-                    break;
-
-                case 2:
-                    if (n.z > 0)
-                    {
-                        result[0] = 11;
-                        result[1] = 4;
-                        result[2] = 8;
-                        result[3] = 0;
-
-                        e.Set(eR.y, eR.x, eR.z);
-                        basis.SetRows(-rtx.rotation.ey, rtx.rotation.ex, rtx.rotation.ez);
-                    }
-
-                    else
-                    {
-                        result[0] = 6;
-                        result[1] = 10;
-                        result[2] = 2;
-                        result[3] = 9;
-
-                        e.Set(eR.y, eR.x, eR.z);
-                        basis.SetRows(-rtx.rotation.ey, -rtx.rotation.ex, -rtx.rotation.ez);
-                    }
-                    break;
-            }
-        }
-
-        //--------------------------------------------------------------------------------------------------
-        public static void ComputeIncidentFace(Transform itx, Vec3 e, Vec3 n, ClipVertex[] result)
-        {
-            n = -Transform.MulT(itx.rotation, n);
-            Vec3 absN = Vec3.Abs(n);
-
-            if (absN.x > absN.y && absN.x > absN.z)
-            {
-                if (n.x > 0)
-                {
-                    result[0].v.Set(e.x, e.y, -e.z);
-                    result[1].v.Set(e.x, e.y, e.z);
-                    result[2].v.Set(e.x, -e.y, e.z);
-                    result[3].v.Set(e.x, -e.y, -e.z);
-
-                    result[0].f.inI = 9;
-                    result[0].f.outI = 1;
-                    result[1].f.inI = 1;
-                    result[1].f.outI = 8;
-                    result[2].f.inI = 8;
-                    result[2].f.outI = 7;
-                    result[3].f.inI = 7;
-                    result[3].f.outI = 9;
-                }
-
-                else
-                {
-                    result[0].v.Set(-e.x, -e.y, e.z);
-                    result[1].v.Set(-e.x, e.y, e.z);
-                    result[2].v.Set(-e.x, e.y, -e.z);
-                    result[3].v.Set(-e.x, -e.y, -e.z);
-
-                    result[0].f.inI = 5;
-                    result[0].f.outI = 11;
-                    result[1].f.inI = 11;
-                    result[1].f.outI = 3;
-                    result[2].f.inI = 3;
-                    result[2].f.outI = 10;
-                    result[3].f.inI = 10;
-                    result[3].f.outI = 5;
-                }
-            }
-
-            else if (absN.y > absN.x && absN.y > absN.z)
-            {
-                if (n.y > 0)
-                {
-                    result[0].v.Set(-e.x, e.y, e.z);
-                    result[1].v.Set(e.x, e.y, e.z);
-                    result[2].v.Set(e.x, e.y, -e.z);
-                    result[3].v.Set(-e.x, e.y, -e.z);
-
-                    result[0].f.inI = 3;
-                    result[0].f.outI = 0;
-                    result[1].f.inI = 0;
-                    result[1].f.outI = 1;
-                    result[2].f.inI = 1;
-                    result[2].f.outI = 2;
-                    result[3].f.inI = 2;
-                    result[3].f.outI = 3;
-                }
-
-                else
-                {
-                    result[0].v.Set(e.x, -e.y, e.z);
-                    result[1].v.Set(-e.x, -e.y, e.z);
-                    result[2].v.Set(-e.x, -e.y, -e.z);
-                    result[3].v.Set(e.x, -e.y, -e.z);
-
-                    result[0].f.inI = 7;
-                    result[0].f.outI = 4;
-                    result[1].f.inI = 4;
-                    result[1].f.outI = 5;
-                    result[2].f.inI = 5;
-                    result[2].f.outI = 6;
-                    result[3].f.inI = 5;
-                    result[3].f.outI = 6;
-                }
-            }
-
-            else
-            {
-                if (n.z > 0)
-                {
-                    result[0].v.Set(-e.x, e.y, e.z);
-                    result[1].v.Set(-e.x, -e.y, e.z);
-                    result[2].v.Set(e.x, -e.y, e.z);
-                    result[3].v.Set(e.x, e.y, e.z);
-
-                    result[0].f.inI = 0;
-                    result[0].f.outI = 11;
-                    result[1].f.inI = 11;
-                    result[1].f.outI = 4;
-                    result[2].f.inI = 4;
-                    result[2].f.outI = 8;
-                    result[3].f.inI = 8;
-                    result[3].f.outI = 0;
-                }
-
-                else
-                {
-                    result[0].v.Set(e.x, -e.y, -e.z);
-                    result[1].v.Set(-e.x, -e.y, -e.z);
-                    result[2].v.Set(-e.x, e.y, -e.z);
-                    result[3].v.Set(e.x, e.y, -e.z);
-
-                    result[0].f.inI = 9;
-                    result[0].f.outI = 6;
-                    result[1].f.inI = 6;
-                    result[1].f.outI = 10;
-                    result[2].f.inI = 10;
-                    result[2].f.outI = 2;
-                    result[3].f.inI = 2;
-                    result[3].f.outI = 9;
-                }
-            }
-
-            for (int i = 0; i < 4; ++i)
-                result[i].v = Transform.Mul(itx, result[i].v);
-        }
-
-        //--------------------------------------------------------------------------------------------------
-
-        static bool InFront(double a) { return a < 0; }
-        static bool Behind(double a) { return a > 0; }
-        static bool On(double a) { return a < 0.005 && a > -0.005; }
-
-        public static int Orthographic(double sign, double e, int axis, byte clipEdge, ClipVertex[] input, int inCount, ClipVertex[] result)
-        {
-            int resultCount = 0;
-            ClipVertex a = input[inCount - 1];
-
-            for (int i = 0; i < inCount; ++i)
-            {
-                ClipVertex b = input[i];
-
-                double da = sign * a.v[axis] - e;
-                double db = sign * b.v[axis] - e;
-
-                ClipVertex cv = new ClipVertex();
-
-                // B
-                if (((InFront(da) && InFront(db)) || On(da) || On(db)))
-                {
-
-                    Assert(resultCount < 8);
-                    result[resultCount++] = b;
-                }
-
-                // I
-                else if (InFront(da) && Behind(db))
-                {
-                    cv.f = b.f;
-                    cv.v = a.v + (b.v - a.v) * (da / (da - db));
-                    cv.f.outR = clipEdge;
-                    cv.f.outI = 0;
-
-                    Assert(resultCount < 8);
-                    result[resultCount++] = cv;
-                }
-
-                // I, B
-                else if (Behind(da) && InFront(db))
-                {
-                    cv.f = a.f;
-                    cv.v = a.v + (b.v - a.v) * (da / (da - db));
-                    cv.f.inR = clipEdge;
-                    cv.f.inI = 0;
-
-                    Assert(resultCount < 8);
-                    result[resultCount++] = cv;
-
-
-                    Assert(resultCount < 8);
-                    result[resultCount++] = b;
-                }
-
-                a = b;
-            }
-
-            return resultCount;
-        }
-
-        static ClipVertex[] input = new ClipVertex[8];
-        static ClipVertex[] result = new ClipVertex[8];
-
-        //--------------------------------------------------------------------------------------------------
-        // Resources (also see q3BoxtoBox's resources):
-        // http://www.randygaul.net/2013/10/27/sutherland-hodgman-clipping/
-        public static int Clip(Vec3 rPos, Vec3 e, byte[] clipEdges, Mat3 basis, ClipVertex[] incident, ClipVertex[] resultVerts, double[] resultDepths)
-        {
-            int inCount = 4;
-            int resultCount;
-
-            for (int i = 0; i < 4; ++i)
-                input[i].v = Transform.MulT(basis, incident[i].v - rPos);
-
-            resultCount = Orthographic(1, e.x, 0, clipEdges[0], input, inCount, result);
-
-            if (resultCount == 0)
-                return 0;
-
-            inCount = Orthographic(1, e.y, 1, clipEdges[1], result, resultCount, input);
-
-            if (inCount == 0)
-                return 0;
-
-            resultCount = Orthographic(-1, e.x, 0, clipEdges[2], input, inCount, result);
-
-            if (resultCount == 0)
-                return 0;
-
-            inCount = Orthographic(-1, e.y, 1, clipEdges[3], result, resultCount, input);
-
-            // Keep incident vertices behind the reference face
-            resultCount = 0;
-            for (int i = 0; i < inCount; ++i)
-            {
-                double d = input[i].v.z - e.z;
-
-                if (d <= 0)
-                {
-                    resultVerts[resultCount].v = Transform.Mul(basis, input[i].v) + rPos;
-                    resultVerts[resultCount].f = input[i].f;
-                    resultDepths[resultCount++] = d;
-                }
-            }
-
-
-            Assert(resultCount <= 8);
-
-            return resultCount;
-        }
-
-        //--------------------------------------------------------------------------------------------------
-        public static void EdgesContact(out Vec3 CA, out Vec3 CB, Vec3 PA, Vec3 QA, Vec3 PB, Vec3 QB)
-        {
-            Vec3 DA = QA - PA;
-            Vec3 DB = QB - PB;
-            Vec3 r = PA - PB;
-            double a = Vec3.Dot(DA, DA);
-            double e = Vec3.Dot(DB, DB);
-            double f = Vec3.Dot(DB, r);
-            double c = Vec3.Dot(DA, r);
-
-            double b = Vec3.Dot(DA, DB);
-            double denom = a * e - b * b;
-
-            double TA = (b * f - c * e) / denom;
-            double TB = (b * TA + f) / e;
-
-            CA = PA + DA * TA;
-            CB = PB + DB * TB;
-        }
-
-        //--------------------------------------------------------------------------------------------------
-        public static void SupportEdge(Transform tx, Vec3 e, Vec3 n, out Vec3 aresult, out Vec3 bresult)
-        {
-            n = Transform.MulT(tx.rotation, n);
-            Vec3 absN = Vec3.Abs(n);
-            Vec3 a = new Vec3(), b = new Vec3();
-
-            // x > y
-            if (absN.x > absN.y)
-            {
-                // x > y > z
-                if (absN.y > absN.z)
-                {
-                    a.Set(e.x, e.y, e.z);
-                    b.Set(e.x, e.y, -e.z);
-                }
-
-                // x > z > y || z > x > y
-                else
-                {
-                    a.Set(e.x, e.y, e.z);
-                    b.Set(e.x, -e.y, e.z);
-                }
-            }
-
-            // y > x
-            else
-            {
-                // y > x > z
-                if (absN.x > absN.z)
-                {
-                    a.Set(e.x, e.y, e.z);
-                    b.Set(e.x, e.y, -e.z);
-                }
-
-                // z > y > x || y > z > x
-                else
-                {
-                    a.Set(e.x, e.y, e.z);
-                    b.Set(-e.x, e.y, e.z);
-                }
-            }
-
-            double signx = Sign(n.x);
-            double signy = Sign(n.y);
-            double signz = Sign(n.z);
-
-            a.x *= signx;
-            a.y *= signy;
-            a.z *= signz;
-            b.x *= signx;
-            b.y *= signy;
-            b.z *= signz;
-
-            aresult = Transform.Mul(tx, a);
-            bresult = Transform.Mul(tx, b);
-        }
-
+        
         //--------------------------------------------------------------------------------------------------
         // Caches for BoxtoBox
         static ClipVertex[] incident = new ClipVertex[4];
@@ -487,16 +42,12 @@ namespace Qu3e
         // http://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/
         // https://box2d.googlecode.com/files/GDC2007_ErinCatto.zip
         // https://box2d.googlecode.com/files/Box2D_Lite.zip
-        public static void BoxtoBox(Manifold m, Box a, Box b)
+        static void BoxToBox(Manifold m, Box a, Box b)
         {
-            Transform atx = a.body.GetTransform();
-            Transform btx = b.body.GetTransform();
-            Transform aL = a.local;
-            Transform bL = b.local;
-            atx = Transform.Mul(atx, aL);
-            btx = Transform.Mul(btx, bL);
-            Vec3 eA = a.e;
-            Vec3 eB = b.e;
+            Transform atx = a.GetWorldTransform();
+            Transform btx = b.GetWorldTransform();
+            Vec3 eA = a.extent;
+            Vec3 eB = b.extent;
 
             // B's frame input A's space
             Mat3 C = Mat3.Transpose(atx.rotation) * btx.rotation;
@@ -636,19 +187,19 @@ namespace Qu3e
             }
 
             // Artificial axis bias to improve frame coherence
-            double kRelTol = 0.95;
-            double kAbsTol = 0.01;
+            const double kRelTol = 0.95, kAbsTol = 0.01;
+
             int axis;
             double sMax;
             Vec3 n;
             double faceMax = Math.Max(aMax, bMax);
+
             if (kRelTol * eMax > faceMax + kAbsTol)
             {
                 axis = eAxis;
                 sMax = eMax;
                 n = nE;
             }
-
             else
             {
                 if (kRelTol * bMax > aMax + kAbsTol)
@@ -673,10 +224,8 @@ namespace Qu3e
 
             if (axis < 6)
             {
-                Transform rtx;
-                Transform itx;
-                Vec3 eR;
-                Vec3 eI;
+                Transform rtx, itx;
+                Vec3 eR, eI;
                 bool flip;
 
                 if (axis < 3)
@@ -687,7 +236,6 @@ namespace Qu3e
                     eI = eB;
                     flip = false;
                 }
-
                 else
                 {
                     rtx = btx;
@@ -733,7 +281,6 @@ namespace Qu3e
                     }
                 }
             }
-
             else
             {
                 n = atx.rotation * n;
@@ -741,14 +288,10 @@ namespace Qu3e
                 if (Vec3.Dot(n, btx.position - atx.position) < 0)
                     n = -n;
 
-                Vec3 PA, QA;
-                Vec3 PB, QB;
+                Vec3 PA, QA, PB, QB, CA, CB;
 
                 SupportEdge(atx, eA, n, out PA, out QA);
-
                 SupportEdge(btx, eB, -n, out PB, out QB);
-
-                Vec3 CA, CB;
 
                 EdgesContact(out CA, out CB, PA, QA, PB, QB);
 
@@ -757,6 +300,7 @@ namespace Qu3e
 
                 Contact c = m.contacts[0];
                 FeaturePair pair = new FeaturePair();
+
                 pair.key = axis;
                 c.fp = pair;
                 c.penetration = sMax;
@@ -764,21 +308,204 @@ namespace Qu3e
             }
         }
 
+        //--------------------------------------------------------------------------------------------------
+        static void BoxToSphere(Manifold m, Box a, Sphere b)
+        {
+            Transform atx = a.GetWorldTransform();
+            Transform btx = b.GetWorldTransform();
+
+            Vec3 eA = a.extent;
+            AABB eAABB = new AABB(-eA, eA);
+            double rB = b.radius;
+
+            // Vector from center A to center B relative to A's space
+            Vec3 t = Transform.MulT(atx.rotation, btx.position - atx.position);
+            // Nearest point to sphere inside box
+            Vec3 n = eAABB.Clip(t);
+            Vec3 d = t - n;
+            double dd = Vec3.LengthSq(d);
+
+            if (dd > rB * rB) return;
+            
+            m.normal = Transform.Mul(atx.rotation, Vec3.Normalize(d));
+            m.contactCount = 1;
+            Contact c = m.contacts[0];
+
+            // Box-sphere does never generating any friction
+            c.fp = new FeaturePair();
+            c.position = Transform.Mul(atx, n);
+            c.penetration = rB * rB - dd;
+        }
+
+        //--------------------------------------------------------------------------------------------------
+        static void SphereToSphere(Manifold m, Sphere a, Sphere b)
+        {
+            Transform atx = a.GetWorldTransform();
+            Transform btx = b.GetWorldTransform();
+            double rA = a.radius;
+            double rB = b.radius;
+            double rT = rA + rB;
+
+            Vec3 d = btx.position - atx.position;
+            double dd = Vec3.Dot(d, d);
+
+            if (dd > rT * rT) return;
+
+            double distance = Vec3.Length(d);
+            Vec3 normal = new Vec3(0.0f, 1.0f, 0.0f);
+            if (distance > 1e-8)
+            {
+                normal = d / distance;
+            }
+
+            m.normal = normal;
+            m.contactCount = 1;
+
+            Contact c = m.contacts[0];
+            
+            // Sphere-sphere does never generating any friction
+            c.fp = new FeaturePair();
+
+            c.position = (atx.position + btx.position) * (0.5);
+            c.penetration = rT * rT - dd; // Avoid Sqrt for performance
+        }
+
+        //--------------------------------------------------------------------------------------------------
+        static void BoxToCapsule(Manifold m, Box a, Capsule b)
+        {
+            Transform atx = a.GetWorldTransform();
+            Transform btx = b.GetWorldTransform();
+            Vec3 eA = a.extent;
+            AABB eAABB = new AABB(-eA, eA);
+            double rB = b.radius;
+            double eB = b.extent;
+
+            // Vector from pole A to center B relative to A's space
+            Vec3 tA = Transform.MulT(atx, Transform.Mul(btx, new Vec3(0, eB, 0)));
+            Vec3 tB = Transform.MulT(atx, Transform.Mul(btx, new Vec3(0, -eB, 0)));
+            
+            Vec3 t, n;
+            ConvexEdgeContact(out n, out t, AABBToConvex(eAABB), tA, tB);
+            Vec3 d = t - n;
+            double dd = Vec3.LengthSq(d);
+            
+            if (dd > rB * rB) return;
+
+            m.normal = Transform.Mul(atx.rotation, Vec3.Normalize(d));
+            m.contactCount = 1;
+            Contact c = m.contacts[0];
+
+            // Box-cylinder does never generating any friction
+            c.fp = new FeaturePair();
+            c.position = Transform.Mul(atx, n);
+            c.penetration = rB * rB - dd;
+        }
+
+        //--------------------------------------------------------------------------------------------------
+        static void SphereToCapsule(Manifold m, Sphere a, Capsule b)
+        {
+            Transform atx = a.GetWorldTransform();
+            Transform btx = b.GetWorldTransform();
+            double rA = a.radius;
+            double rB = b.radius;
+            double rT = rA + rB;
+            double eB = b.extent;
+
+            // Vector from center B to center A relative to B's space
+            Vec3 t = Transform.MulT(btx, atx.position);
+
+            Vec3 O;
+            if (Math.Abs(t.y) >= eB)
+            {
+                // Collision hit on the hemisphere
+                O = new Vec3(0, Sign(t.y), 0) * eB;
+            }
+            else
+            {
+                // Collision hit on the cylinder
+                O = new Vec3(0, t.y, 0);
+            }
+
+            t = t - O;
+
+            double dd = Vec3.LengthSq(t);
+            if (dd > rB * rB) return;
+
+            m.contactCount = 1;
+            m.normal = Transform.Mul(atx.rotation, Vec3.Normalize(t));
+            Contact c = m.contacts[0];
+
+            // Sphere-capsule does never generating any friction
+            c.fp = new FeaturePair();
+            c.position = Transform.Mul(atx, O + (m.normal) * rB);
+            c.penetration = rT * rT - dd; // Avoid Sqrt for performance
+        }
+
+        //--------------------------------------------------------------------------------------------------
+        static void CapsuleToCapsule(Manifold m, Capsule a, Capsule b)
+        {
+            Transform atx = a.GetWorldTransform();
+            Transform btx = b.GetWorldTransform();
+            double rA = a.radius;
+            double rB = b.radius;
+            double rT = rA + rB;
+            double eA = a.extent;
+            double eB = b.extent;
+            Vec3 oA = new Vec3(0, eA, 0);
+            Vec3 oB = new Vec3(0, eB, 0);
+
+            Vec3 A, B;
+            EdgesContact(out A, out B, Transform.Mul(atx, oA), Transform.Mul(atx, -oA), 
+                   Transform.Mul(btx, oB), Transform.Mul(btx, -oB));
+
+            double dd = Vec3.DistanceSq(A, B);
+            if (dd > rT * rT) return;
+
+            {
+                //TODO: Parallel, then make friction
+            }
+            
+            m.contactCount = 1;
+            m.normal = Vec3.Normalize(B - A);
+            Contact c = m.contacts[0];
+
+            // Non parallel Capsule-capsule does never generating any friction
+            c.fp = new FeaturePair();
+            c.position = (A + B) * 0.5;
+            c.penetration = rT - Math.Sqrt(dd); // Avoid Sqrt for performance
+        }
+
+        //--------------------------------------------------------------------------------------------------
         public static void ComputeCollision (Manifold m, Shape a, Shape b)
         {
-            if (a is Box && b is Box)
+            if (a is Box)
             {
-                BoxtoBox(m, a as Box, b as Box);
+                if (b is Box)
+                    BoxToBox(m, a as Box, b as Box);
+                else if (b is Sphere)
+                    BoxToSphere(m, a as Box, b as Sphere);
+                else if (b is Capsule)
+                    BoxToCapsule(m, a as Box, b as Capsule);
+            }
+            else if (a is Sphere)
+            {
+                if (b is Box)
+                    BoxToSphere(m, b as Box, a as Sphere);
+                else if (b is Sphere)
+                    SphereToSphere(m, a as Sphere, b as Sphere);
+                else if (b is Capsule)
+                    SphereToCapsule(m, a as Sphere, b as Capsule);
+            }
+            else if (a is Capsule)
+            {
+                if (b is Box)
+                    BoxToCapsule(m, b as Box, a as Capsule);
+                else if (b is Sphere)
+                    SphereToCapsule(m, b as Sphere, a as Capsule);
+                else if (b is Capsule)
+                    CapsuleToCapsule(m, a as Capsule, b as Capsule);
             }
         }
 
-        static void Swap<T>(ref T l, ref T r)
-        {
-            var tmp = l;
-            l = r;
-            r = tmp;
-        }
-
-        static double Sign (double v) { return v >= 0 ? 1 : -1; }
     }
 }

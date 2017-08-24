@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine - C# Version 1.01
+    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -82,6 +82,25 @@ namespace Qu3e
             Vec3 normal = Mul(tx.rotation, p.normal);
 
             return new HalfSpace(normal, Vec3.Dot(origin, normal));
+        }
+
+        //--------------------------------------------------------------------------------------------------
+        public static AABB Mul(Transform t, AABB aabb)
+        {
+            Vec3 min = new Vec3(double.MaxValue, double.MaxValue, double.MaxValue);
+            Vec3 max = new Vec3(-double.MaxValue, -double.MaxValue, -double.MaxValue);
+
+            Vec3 center = aabb.min + aabb.max;
+            Vec3 extent = (aabb.max - aabb.min) / 2;
+
+            for (int i = 0; i < 8; ++i)
+            {
+                var v = Transform.Mul(t, Vec3.Mul(Box.kBoxVertices[i], extent));
+                min = Vec3.Min(min, v);
+                max = Vec3.Max(max, v);
+            }
+
+            return new AABB() { min = min + center, max = max + center };
         }
 
         //--------------------------------------------------------------------------------------------------
