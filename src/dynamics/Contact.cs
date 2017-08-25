@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
+    Qu3e Physics Engine - C# Version 1.01
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -29,18 +29,7 @@ using System.Runtime.InteropServices;
 
 namespace Qu3e
 {
-
-    // in stands for "incoming"
-    // out stands for "outgoing"
-    // I stands for "incident"
-    // R stands for "reference"
-    // See D. Gregorius GDC 2015 on creating contacts for more details
-    // Each feature pair is used to cache solutions from one physics tick to another. This is
-    // called warmstarting, and lets boxes stack and stay stable. Feature pairs identify points
-    // of contact over multiple physics ticks. Each feature pair is the junction of an incoming
-    // feature and an outgoing feature, usually a result of clipping routines. The exact info
-    // stored in the feature pair can be arbitrary as long as the result is a unique ID for a
-    // given intersecting configuration.
+    // A shortcut to union in cpp
     [StructLayout(LayoutKind.Explicit)]
     public struct FeaturePair
     {
@@ -59,24 +48,21 @@ namespace Qu3e
 
     public class Contact
     {
-        // World coordinate of contact
-        public Vec3 position;
-        // Depth of penetration from collision 
-        public double penetration;
-        // Accumulated normal impulse
-        public double normalImpulse;
-        // Accumulated friction impulse
-        public double[] tangentImpulse = new double[2];
-        // Features on A and B for this contact
-        public FeaturePair fp;
-        // Used for debug rendering
-        public byte warmStarted;               
+        public Vec3 position;          // World coordinate of contact
+        public double penetration;         // Depth of penetration from collision
+        public double normalImpulse;           // Accumulated normal impulse
+        public double[] tangentImpulse = new double[2];   // Accumulated friction impulse
+        // public double bias;                    // Restitution + baumgarte
+        // public double normalMass;              // Normal constraint mass
+        // public double[] tangentMass = new double[2];      // Tangent constraint mass
+        public FeaturePair fp;         // Features on A and B for this contact
+        public byte warmStarted;               // Used for debug rendering
     };
 
 
     public class Manifold
     {
-        public void SetPair(Shape a, Shape b)
+        public void SetPair(Box a, Box b)
         {
             A = a;
             B = b;
@@ -84,8 +70,8 @@ namespace Qu3e
             sensor = A.sensor || B.sensor;
         }
 
-        public Shape A;
-        public Shape B;
+        public Box A;
+        public Box B;
 
         public Vec3 normal;                // From A to B
         public Vec3[] tangentVectors = new Vec3[2]; // Tangent vectors
@@ -139,7 +125,7 @@ namespace Qu3e
             }
         }
 
-        public Shape A, B;
+        public Box A, B;
         public Body bodyA, bodyB;
 
         public ContactEdge edgeA;
@@ -152,6 +138,7 @@ namespace Qu3e
 
         public ContactFlags Flags;
 
+
         public ContactConstraint()
         {
             manifold = new Manifold();
@@ -160,6 +147,8 @@ namespace Qu3e
 
         }
     }
+
+
 
     [Flags]
     public enum ContactFlags

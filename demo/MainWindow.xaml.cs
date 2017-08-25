@@ -15,7 +15,6 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Qu3e;
 using Transform = Qu3e.Transform;
-using Shape = Qu3e.Shape;
 using System.Threading;
 using System.IO;
 
@@ -29,16 +28,109 @@ namespace Qu3e_Demo
         public MainWindow()
         {
             InitializeComponent();
-            InitPhysics();
-            InitGeometry();
-            InitVisual();
-
+            InitPhysics2();
+            boxes = new List<Box>();
+            scene = InitPhysics(boxes);
         }
 
-        const int INITIAL_SQ = 0;
-
-        void InitPhysics()
+        public void Execute()
         {
+            var s = new StringBuilder();
+            lastT = DateTime.Now;
+            while (executed)
+            {
+                Application.Current.Dispatcher.Invoke(ExecuteVisual);
+
+                var time = DateTime.Now;
+                var dt = (time - lastT).TotalSeconds;
+                lastT = time;
+                var memory = GC.GetTotalMemory(false) / 1024;
+
+                
+                try { scene.Step(dt); }
+                catch (Exception) { }
+
+                var mem = GC.GetTotalMemory(false) / 1024;
+                deltaT = DateTime.Now - time;
+                var deltaM = mem - memory;
+                steps++;
+
+                capturedGC = deltaM;
+
+                if (deltaM < 0)
+                {
+                    capturedGCSpeed = -capturedGC / (steps - capturedGCSteps);
+                    capturedGCSteps = steps;
+                }
+
+            }
+        }
+
+        DateTime lastT;
+        TimeSpan deltaT;
+        int steps;
+        long capturedGC;
+        long capturedGCSteps;
+        long capturedGCSpeed;
+
+        public void ExecuteVisual()
+        {
+
+            // Update the view
+            for (int i = 0; i < cubes.Count; i++)
+            {
+                cubes[i].Transform = new MatrixTransform3D(Con(boxes[i].body.GetTransform()));
+            }
+
+            timeSpan.Content = "frame: " + steps + ", dt: " + deltaT.Milliseconds + " ms, memory: " +
+                (capturedGC > 0 ? "+" + capturedGC : capturedGC.ToString()) + " KB, obj: " + boxes.Count;
+            view.InvalidateVisual();
+        }
+
+        List<GeometryModel3D> cubes;
+        Scene scene;
+        List<Box> boxes;
+
+        public Matrix3D Con(Transform v)
+        {
+            var m = new Matrix3D();
+
+            m.M11 = v.rotation[0][0];
+            m.M21 = v.rotation[0][1];
+            m.M31 = v.rotation[0][2];
+            m.M12 = v.rotation[1][0];
+            m.M22 = v.rotation[1][1];
+            m.M32 = v.rotation[1][2];
+            m.M13 = v.rotation[2][0];
+            m.M23 = v.rotation[2][1];
+            m.M33 = v.rotation[2][2];
+            m.Translate(new Vector3D(v.position[0], v.position[1], v.position[2]));
+            return m;
+        }
+
+        void InitPhysics2()
+        {
+
+            cubes = new List<GeometryModel3D>();
+
+            for (int i = 0; i < 64; i++)
+            {
+                var c = new GeometryModel3D();
+                c.Material = SampleCube.Material;
+                c.Geometry = SampleCube.Geometry;
+                c.Transform = new TranslateTransform3D(i - 10, 0, 0);
+                cubes.Add(c);
+                SceneView.Children.Add(c);
+            }
+            SceneView.Children.Remove(SampleCube);
+            view.InvalidateVisual();
+        }
+
+        static Scene InitPhysics(List<Box> boxes)
+        {
+            var scene = new Scene(1 / 100.0, new Vec3(0, -9.8, 0), 10);
+            //scene.SetAllowSleep(false);
+            
 
             // Create the floor
             BodyDef bodyDef = new BodyDef();
@@ -46,24 +138,22 @@ namespace Qu3e_Demo
 
             ShapeDef ShapeDef = new ShapeDef()
             {
-                Type = ShapeType.Box,
                 Restitution = 0.5,
                 Friction = 0.7,
-                Size = new Vec3(50.0, 1.0, 50.0),
+                E = new Vec3(25.0, 0.5, 25.0),
             };
 
-            body.AddShape(ShapeDef);
+            body.AddBox(ShapeDef);
 
             bodyDef.bodyType = BodyType.eDynamicBody;
             bodyDef.active = true;
             bodyDef.awake = true;
-            ShapeDef.Type = ShapeType.Box;
-            ShapeDef.Size = new Vec3(1.0, 1.0, 1.0);
+            ShapeDef.E = new Vec3(0.5f, 0.5f, 0.5f);
 
             var r = new Random();
-            for (int i = 0; i < INITIAL_SQ; ++i)
+            for (int i = 0; i < 8; ++i)
             {
-                for (int j = 0; j < INITIAL_SQ; ++j)
+                for (int j = 0; j < 8; ++j)
                 {
                     bodyDef.position.Set(-5.0f + 1.25f * i, 5.0f, -5.0f + 1.25f * j);
                     bodyDef.axis = new Vec3(0, 0, 1);
@@ -71,113 +161,34 @@ namespace Qu3e_Demo
 
                     body = scene.CreateBody(bodyDef);
 
-                    shapes.Add(body.AddShape(ShapeDef));
+                    boxes.Add(body.AddBox(ShapeDef));
                 }
             }
+
+            return scene;
         }
-
-        void InitGeometry()
-        {
-            GeometrySets.SetupCube(geometryCube, new Vector3D(0.5, 0.5, 0.5));
-            GeometrySets.SetupSphere(geometrySphere, 0.5);
-            GeometrySets.SetupCapsule(geometryCapsule, 0.5, 1.5);
-        }
-
-        void InitVisual()
-        {
-
-            cubes = new List<GeometryModel3D>();
-
-            for (int i = 0; i < INITIAL_SQ * INITIAL_SQ; i++)
-            {
-                var c = new GeometryModel3D();
-                c.Material = materialR;
-                c.Geometry = geometryCube;
-                c.Transform = new TranslateTransform3D(i - 10, 0, 0);
-                cubes.Add(c);
-                SceneView.Children.Add(c);
-            }
-            view.InvalidateVisual();
-        }
-        
-        List<GeometryModel3D> cubes = new List<GeometryModel3D>();
-        Scene scene = new Scene(new Vec3(0, -10, 0), 20);
-        List<Shape> shapes = new List<Shape>();
 
         bool executed;
-
-        DateTime lastT;
-        TimeSpan deltaT;
-        int steps;
-        long capturedGC;
-
-        Material materialR = new DiffuseMaterial(new SolidColorBrush(Colors.Red));
-        Material materialY = new DiffuseMaterial(new SolidColorBrush(Colors.Yellow));
-        Material materialG = new DiffuseMaterial(new SolidColorBrush(Colors.Yellow));
-        MeshGeometry3D geometryCube = new MeshGeometry3D();
-        MeshGeometry3D geometrySphere = new MeshGeometry3D();
-        MeshGeometry3D geometryCapsule = new MeshGeometry3D();
-
-        public void ExecutePhysics(object sender, EventArgs e)
-        {
-            var s = new StringBuilder();
-
-            var memory = GC.GetTotalMemory(false) / 1024;
-            var time = DateTime.Now;
-            var dt = (time - lastT).TotalSeconds;
-
-            lastT = time;
-                
-            try { scene.Step(dt); }
-            catch (InvalidOperationException) { }
-
-            deltaT = DateTime.Now - time;
-            steps++;
-            capturedGC = GC.GetTotalMemory(false) / 1024 - memory;
-        }
-
-
-        public void ExecuteVisual(object sender, EventArgs e)
-        {
-
-            // Update the view
-            for (int i = 0; i < cubes.Count; i++)
-            {
-                cubes[i].Transform = new MatrixTransform3D(Con(shapes[i].body.GetTransform()));
-            }
-
-            timeSpan.Content = "frame: " + steps + ", dt: " + deltaT.Milliseconds + " ms, memory: " +
-                (capturedGC > 0 ? "+" + capturedGC : capturedGC.ToString()) + " KB, obj: " + shapes.Count;
-            view.InvalidateVisual();
-        }
-
-
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (!executed)
             {
                 executed = true;
-                CompositionTarget.Rendering += ExecutePhysics;
-                CompositionTarget.Rendering += ExecuteVisual;
-                lastT = DateTime.Now;
+                new Thread(new ThreadStart(Execute)).Start();
             }
             else
             {
-                
                 BodyDef bodyDef = new BodyDef();
                 bodyDef.position.Set(0, 7.0f, 0);
-                bodyDef.angularVelocity = new Vec3(0, 0, 3);
                 bodyDef.bodyType = BodyType.eDynamicBody;
                 Body body = scene.CreateBody(bodyDef);
 
                 ShapeDef ShapeDef = new ShapeDef();
-                ShapeDef.Type = ShapeType.Box;
-                ShapeDef.Size = new Vec3(1, 1, 1);
-                shapes.Add(body.AddShape(ShapeDef));
+                boxes.Add(body.AddBox(ShapeDef));
 
                 var c = new GeometryModel3D();
-                c.Material = materialG;
-                c.Geometry = geometryCube;
+                c.Material = SampleCube.Material;
+                c.Geometry = SampleCube.Geometry;
                 c.Transform = new TranslateTransform3D(0, 0, 0);
                 cubes.Add(c);
                 SceneView.Children.Add(c);
@@ -187,24 +198,6 @@ namespace Qu3e_Demo
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             executed = false;
-
-        }
-
-        static Matrix3D Con(Transform v)
-        {
-            var m = new Matrix3D();
-
-            m.M11 = v.rotation[0][0];
-            m.M12 = v.rotation[0][1];
-            m.M13 = v.rotation[0][2];
-            m.M21 = v.rotation[1][0];
-            m.M22 = v.rotation[1][1];
-            m.M23 = v.rotation[1][2];
-            m.M31 = v.rotation[2][0];
-            m.M32 = v.rotation[2][1];
-            m.M33 = v.rotation[2][2];
-            m.Translate(new Vector3D(v.position[0], v.position[1], v.position[2]));
-            return m;
         }
     }
 }

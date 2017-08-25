@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
+    Qu3e Physics Engine - C# Version 1.01
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -49,14 +49,14 @@ namespace Qu3e
 
         }
 
-        public void InsertShape(Shape shape, AABB aabb)
+        public void InsertBox(Box shape, AABB aabb)
         {
             int id = Tree.Insert(aabb, shape);
             shape.broadPhaseIndex = id;
             BufferMove(id);
         }
 
-        public void RemoveShape(Shape shape)
+        public void RemoveBox(Box shape)
         {
             Tree.Remove(shape.broadPhaseIndex);
         }
@@ -93,8 +93,8 @@ namespace Qu3e
                 {
                     // Add contact to manager
                     ContactPair pair = PairBuffer[i];
-                    Shape A = (Shape)Tree.GetUserData(pair.A);
-                    Shape B = (Shape)Tree.GetUserData(pair.B);
+                    Box A = (Box)Tree.GetUserData(pair.A);
+                    Box B = (Box)Tree.GetUserData(pair.B);
                     Manager.AddContact(A, B);
 
                     ++i;

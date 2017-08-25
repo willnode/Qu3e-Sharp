@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
+    Qu3e Physics Engine - C# Version 1.01
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -213,15 +213,6 @@ namespace Qu3e
                 a, 0, 0,
                 0, b, 0,
                 0, 0, c
-                );
-        }
-
-        public static Mat3 Diagonal(Vec3 v)
-        {
-            return new Mat3(
-                v.x, 0, 0,
-                0, v.y, 0,
-                0, 0, v.z
                 );
         }
 

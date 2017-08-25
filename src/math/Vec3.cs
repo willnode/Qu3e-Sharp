@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
+    Qu3e Physics Engine - C# Version 1.01
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -115,12 +115,6 @@ namespace Qu3e
         }
 
         //--------------------------------------------------------------------------------------------------
-        public static Vec3 Uniform(double scale)
-        {
-            return new Vec3(scale, scale, scale);
-        }
-
-        //--------------------------------------------------------------------------------------------------
         public static Vec3 Mul(Vec3 a, Vec3 b)
         {
             return new Vec3(a.x * b.x, a.y * b.y, a.z * b.z);
@@ -216,12 +210,6 @@ namespace Qu3e
         public static double MaxPerElem(Vec3 a)
         {
             return Math.Max(a.x, Math.Max(a.y, a.z));
-        }
-
-        // C# Specific
-        public override string ToString()
-        {
-            return string.Format("{{ {0:F2}; {1:F2}; {2:F2} }}", x, y, z);
         }
 
 

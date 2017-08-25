@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
+    Qu3e Physics Engine - C# Version 1.01
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 

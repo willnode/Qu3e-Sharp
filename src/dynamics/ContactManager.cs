@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
-    Qu3e Physics Engine v1.01 - Unofficial C# Version with modifications
+    Qu3e Physics Engine - C# Version 1.01
 
 	Copyright (c) 2014 Randy Gaul http://www.randygaul.net
 
@@ -38,7 +38,7 @@ namespace Qu3e
 
         // Add a new contact constraint for a pair of objects
         // unless the contact constraint already exists
-        public void AddContact(Shape A, Shape B)
+        public void AddContact(Box A, Box B)
         {
             Body bodyA = A.body;
             Body bodyB = B.body;
@@ -52,8 +52,8 @@ namespace Qu3e
             {
                 if (edge.other == bodyB)
                 {
-                    //Shape shapeA = edge.constraint.A;
-                    //Shape shapeB = edge.constraint.B;
+                    //Box shapeA = edge.constraint.A;
+                    //Box shapeB = edge.constraint.B;
 
                     // @TODO: Verify this against Box2D; not sure if this is all we need here
                     // if ((A == shapeA) && (B == shapeB))
@@ -134,9 +134,9 @@ namespace Qu3e
         }
         public void RemoveFromBroadphase(Body body)
         {
-            foreach (var shape in body.Shapes)
+            foreach (var box in body.Boxes)
             {
-                Broadphase.RemoveShape(shape);
+                Broadphase.RemoveBox(box);
             }
         }
 
@@ -148,8 +148,8 @@ namespace Qu3e
             for (int h = 0; h < ContactList.Count; h++)
             {
                 var constraint = ContactList[h];
-                Shape A = constraint.A;
-                Shape B = constraint.B;
+                Box A = constraint.A;
+                Box B = constraint.B;
                 Body bodyA = A.body;
                 Body bodyB = B.body;
 
@@ -178,7 +178,7 @@ namespace Qu3e
                 Vec3 ot0 = oldManifold.tangentVectors[0];
                 Vec3 ot1 = oldManifold.tangentVectors[1];
                 constraint.SolveCollision();
-                Algorithms.ComputeBasis(manifold.normal, ref manifold.tangentVectors[0], ref manifold.tangentVectors[1]);
+                AABB.ComputeBasis(manifold.normal, ref manifold.tangentVectors[0], ref manifold.tangentVectors[1]);
 
                 for (int i = 0; i < manifold.contactCount; ++i)
                 {
@@ -228,6 +228,7 @@ namespace Qu3e
 
                 if ((contact.Flags & ContactFlags.eColliding) == 0)
                 {
+
                     continue;
                 }
 
