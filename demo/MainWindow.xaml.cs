@@ -50,8 +50,8 @@ namespace Qu3e_Demo
                 try { scene.Step(dt); }
                 catch (Exception) { }
 
-                var mem = GC.GetTotalMemory(false) / 1024;
                 deltaT = DateTime.Now - time;
+                var mem = GC.GetTotalMemory(false) / 1024;
                 var deltaM = mem - memory;
                 steps++;
 
@@ -136,19 +136,17 @@ namespace Qu3e_Demo
             BodyDef bodyDef = new BodyDef();
             Body body = scene.CreateBody(bodyDef);
 
-            ShapeDef ShapeDef = new ShapeDef()
-            {
-                Restitution = 0.5,
-                Friction = 0.7,
-                E = new Vec3(25.0, 0.5, 25.0),
-            };
-
-            body.AddBox(ShapeDef);
+            BoxDef boxDef = new BoxDef();
+            boxDef.SetRestitution(0.5);
+            boxDef.SetFriction(0.7);
+            Transform tx = Transform.Identity;
+            boxDef.Set(tx, new Vec3(50.0, 1.0, 50.0));
+            body.AddBox(boxDef);
 
             bodyDef.bodyType = BodyType.eDynamicBody;
             bodyDef.active = true;
             bodyDef.awake = true;
-            ShapeDef.E = new Vec3(0.5f, 0.5f, 0.5f);
+            boxDef.Set(tx, new Vec3(1.0f, 1.0f, 1.0f));
 
             var r = new Random();
             for (int i = 0; i < 8; ++i)
@@ -161,7 +159,7 @@ namespace Qu3e_Demo
 
                     body = scene.CreateBody(bodyDef);
 
-                    boxes.Add(body.AddBox(ShapeDef));
+                    boxes.Add(body.AddBox(boxDef));
                 }
             }
 
@@ -183,8 +181,8 @@ namespace Qu3e_Demo
                 bodyDef.bodyType = BodyType.eDynamicBody;
                 Body body = scene.CreateBody(bodyDef);
 
-                ShapeDef ShapeDef = new ShapeDef();
-                boxes.Add(body.AddBox(ShapeDef));
+                BoxDef boxDef = new BoxDef();
+                boxes.Add(body.AddBox(boxDef));
 
                 var c = new GeometryModel3D();
                 c.Material = SampleCube.Material;

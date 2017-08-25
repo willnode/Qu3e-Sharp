@@ -52,18 +52,14 @@ namespace Qu3e
             {
                 if (edge.other == bodyB)
                 {
-                    //Box shapeA = edge.constraint.A;
-                    //Box shapeB = edge.constraint.B;
+                    Box shapeA = edge.constraint.A;
+                    Box shapeB = edge.constraint.B;
 
                     // @TODO: Verify this against Box2D; not sure if this is all we need here
-                    // if ((A == shapeA) && (B == shapeB))
-                    {
+                    if ((A == shapeA) && (B == shapeB))
                         return;
-                    }
                 }
             }
-
-           // Console.WriteLine("New contact " + ContactList.Count);
 
             // Create new contact
             ContactConstraint contact = new ContactConstraint()
@@ -175,15 +171,15 @@ namespace Qu3e
                 }
                 Manifold manifold = constraint.manifold;
                 Manifold oldManifold = constraint.manifold;
-                Vec3 ot0 = oldManifold.tangentVectors[0];
-                Vec3 ot1 = oldManifold.tangentVectors[1];
+                Vec3 ot0 = oldManifold.tangentVectors;
+                Vec3 ot1 = oldManifold.bitangentVectors;
                 constraint.SolveCollision();
-                AABB.ComputeBasis(manifold.normal, ref manifold.tangentVectors[0], ref manifold.tangentVectors[1]);
+                AABB.ComputeBasis(manifold.normal, ref manifold.tangentVectors, ref manifold.bitangentVectors);
 
                 for (int i = 0; i < manifold.contactCount; ++i)
                 {
                     Contact c = manifold.contacts[i];
-                    c.tangentImpulse[0] = c.tangentImpulse[1] = c.normalImpulse = 0;
+                    c.tangentImpulse = c.bitangentImpulse = c.normalImpulse = 0;
                     byte oldWarmStart = c.warmStarted;
                     c.warmStarted = 0;
 
@@ -195,9 +191,9 @@ namespace Qu3e
                             c.normalImpulse = oc.normalImpulse;
 
                             // Attempt to re-project old friction solutions
-                            Vec3 friction = ot0 * oc.tangentImpulse[0] + ot1 * oc.tangentImpulse[1];
-                            c.tangentImpulse[0] = Vec3.Dot(friction, manifold.tangentVectors[0]);
-                            c.tangentImpulse[1] = Vec3.Dot(friction, manifold.tangentVectors[1]);
+                            Vec3 friction = ot0 * oc.tangentImpulse + ot1 * oc.bitangentImpulse;
+                            c.tangentImpulse = Vec3.Dot(friction, manifold.tangentVectors);
+                            c.bitangentImpulse = Vec3.Dot(friction, manifold.bitangentVectors);
                             c.warmStarted = Math.Max(oldWarmStart, (byte)(oldWarmStart + 1));
                             break;
                         }

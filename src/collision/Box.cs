@@ -33,12 +33,34 @@ namespace Qu3e
         public Vec3 center;
         public double mass;
     }
-    public class Box : Shape
+    public class Box
     {
+        public Transform local;
         public Vec3 e; // extent, as in the extent of each OBB axis
 
+        //public Box next;
+        public Body body;
+        public double friction;
+        public double restitution;
+        public double density;
+        public int broadPhaseIndex;
+        public object userData;
+        public bool sensor;
 
-        public override bool TestPoint(Transform tx, Vec3 p)
+        public void SetUserdata(object data)
+        {
+            userData = data;
+        }
+        public object GetUserdata()
+        {
+            return userData;
+        }
+        public void SetSensor(bool isSensor)
+        {
+            sensor = isSensor;
+        }
+
+        public bool TestPoint(Transform tx, Vec3 p)
         {
             Transform world = Transform.Mul(tx, local);
             Vec3 p0 = Transform.MulT(world, p);
@@ -53,10 +75,10 @@ namespace Qu3e
                     return false;
                 }
             }
+
             return true;
         }
-
-        public override bool Raycast(Transform tx, RaycastData raycast)
+        public bool Raycast(Transform tx, RaycastData raycast)
         {
             Transform world = Transform.Mul(tx, local);
             Vec3 d = Transform.MulT(world.rotation, raycast.dir);
@@ -125,7 +147,7 @@ namespace Qu3e
                         new  Vec3(  1,  1,  1 )
                         };
 
-        public override void ComputeAABB(Transform tx, out AABB aabb)
+        public void ComputeAABB(Transform tx, out AABB aabb)
         {
             Transform world = Transform.Mul(tx, local);
 
@@ -143,7 +165,7 @@ namespace Qu3e
             aabb.max = max;
         }
 
-        public override void ComputeMass(out MassData md)
+        public void ComputeMass(out MassData md)
         {
             // Calculate inertia tensor
             double ex2 = 4 * e.x * e.x;
@@ -181,29 +203,87 @@ namespace Qu3e
                 2 - 1, 8 - 1, 4 - 1
             };
 
-        public override void Render(Transform tx, bool awake, Render render)
+        public void Render(Transform tx, bool awake, Render render)
         {
             Transform world = Transform.Mul(tx, local);
-            
+
+            Vec3[] vertices = new Vec3[8]{
+                   new Vec3( -e.x, -e.y, -e.z ),
+                   new  Vec3( -e.x, -e.y,  e.z ),
+                   new  Vec3( -e.x,  e.y, -e.z ),
+                  new   Vec3( -e.x,  e.y,  e.z ),
+                  new   Vec3(  e.x, -e.y, -e.z ),
+            new         Vec3(  e.x, -e.y,  e.z ),
+                new     Vec3(  e.x,  e.y, -e.z ),
+                    new Vec3(  e.x,  e.y,  e.z )
+                };
+
             for (int i = 0; i < 36; i += 3)
             {
-                Vec3 a = Transform.Mul(world, Vec3.Mul(e, kBoxVertices[kBoxIndices[i]]));
-                Vec3 b = Transform.Mul(world, Vec3.Mul(e, kBoxVertices[kBoxIndices[i + 1]]));
-                Vec3 c = Transform.Mul(world, Vec3.Mul(e, kBoxVertices[kBoxIndices[i + 2]]));
+                Vec3 a = Transform.Mul(world, vertices[kBoxIndices[i]]);
+                Vec3 b = Transform.Mul(world, vertices[kBoxIndices[i + 1]]);
+                Vec3 c = Transform.Mul(world, vertices[kBoxIndices[i + 2]]);
 
                 Vec3 n = Vec3.Normalize(Vec3.Cross(b - a, c - a));
 
-                render.SetPenColor( 0.2, 0.4, 0.7, 0.5 );
-                render.SetPenPosition( a.x, a.y, a.z );
-                render.Line( b.x, b.y, b.z );
-                render.Line( c.x, c.y, c.z );
-                render.Line( a.x, a.y, a.z );
+                //render->SetPenColor( 0.2f, 0.4f, 0.7f, 0.5f );
+                //render->SetPenPosition( a.x, a.y, a.z );
+                //render->Line( b.x, b.y, b.z );
+                //render->Line( c.x, c.y, c.z );
+                //render->Line( a.x, a.y, a.z );
 
                 render.SetTriNormal(n.x, n.y, n.z);
                 render.Triangle(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
             }
         }
     }
+
+    public class BoxDef
+    {
+
+        public BoxDef()
+        {
+            // Common default values
+            Friction = 0.4;
+            Restitution = 0.2;
+            Density = 1.0;
+            Sensor = false;
+            Tx = Transform.Identity;
+            E = new Vec3(0.5, 0.5, 0.5);
+        }
+
+        public void Set(Transform tx, Vec3 extents)
+        {
+            Tx = tx;
+            E = extents * (0.5);
+        }
+
+        public void SetFriction(double friction)
+        {
+            Friction = friction;
+        }
+        public void SetRestitution(double restitution)
+        {
+            Restitution = restitution;
+        }
+        public void SetDensity(double density)
+        {
+            Density = density;
+        }
+        public void SetSensor(bool sensor)
+        {
+            Sensor = sensor;
+        }
+
+        internal Transform Tx;
+        internal Vec3 E;
+
+        internal double Friction;
+        internal double Restitution;
+        internal double Density;
+        internal bool Sensor;
+    };
+
 
 
 }

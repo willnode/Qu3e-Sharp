@@ -764,14 +764,6 @@ namespace Qu3e
             }
         }
 
-        public static void ComputeCollision (Manifold m, Shape a, Shape b)
-        {
-            if (a is Box && b is Box)
-            {
-                BoxtoBox(m, a as Box, b as Box);
-            }
-        }
-
         static void Swap<T>(ref T l, ref T r)
         {
             var tmp = l;

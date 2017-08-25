@@ -33,43 +33,25 @@ namespace Qu3e
         public Vec3 rb;                    // Vector from C.O.M to contact position
         public double penetration;         // Depth of penetration from collision
         public double normalImpulse;           // Accumulated normal impulse
-        public double[] tangentImpulse = new double[2];   // Accumulated friction impulse
+        public double tangentImpulse;   // Accumulated friction impulse
+        public double bitangentImpulse;   // Accumulated friction impulse
         public double bias;                    // Restitution + baumgarte
         public double normalMass;              // Normal constraint mass
-        public double[] tangentMass = new double[2];      // Tangent constraint mass
+        public double tangentMass;      // Tangent constraint mass
+        public double bitangentMass;      // Tangent constraint mass
 
         // ContactState Heap/Memory Pooling for c#
         static Stack<ContactState> heap = new Stack<ContactState>();
-        static public ContactState Allocate() { return heap.Pop(); }
+        static public ContactState Allocate() { return heap.Count == 0 ? new ContactState() : heap.Pop(); }
         static public void Free(ContactState instance) { heap.Push(instance); }
     };
-
-    // Pseudo Stack implementation
-    internal class Stack<T> : List<T> where T : new()
-    {
-        public T Pop ()
-        {
-            if (Count == 0)
-                return new T();
-            else
-            {
-                var r = this[Count - 1];
-                RemoveAt(Count - 1);
-                return r;
-            }
-        }
-
-        public void Push(T t)
-        {
-            Add(t);
-        }
-    }
 
     public class ContactConstraintState
     {
         public ContactState[] contacts = new ContactState[8];
         public int contactCount;
-        public Vec3[] tangentVectors = new Vec3[2]; // Tangent vectors
+        public Vec3 tangentVectors; // Tangent vectors
+        public Vec3 bitangentVectors; // Tangent vectors
         public Vec3 normal;                // From A to B
         public Vec3 centerA;
         public Vec3 centerB;
@@ -84,7 +66,7 @@ namespace Qu3e
 
         // ContactConstaintState Heap/Memory Pooling for c#
         static Stack<ContactConstraintState> heap = new Stack<ContactConstraintState>();
-        static public ContactConstraintState Allocate() { return heap.Pop(); }
+        static public ContactConstraintState Allocate() { return heap.Count == 0 ? new ContactConstraintState() : heap.Pop(); }
         static public void Free(ContactConstraintState instance) { heap.Push(instance); }
     };
 
@@ -93,6 +75,7 @@ namespace Qu3e
         public void Initialize(Island island)
         {
             Island = island;
+           // ContactCount = island.ContactCount;
             Contacts = island.ContactStates;
             Velocities = Island.Velocities;
             EnableFriction = island.EnableFriction;
@@ -109,8 +92,8 @@ namespace Qu3e
                     Contact oc = cc.manifold.contacts[j];
                     ContactState cs = c.contacts[j];
                     oc.normalImpulse = cs.normalImpulse;
-                    oc.tangentImpulse[0] = cs.tangentImpulse[0];
-                    oc.tangentImpulse[1] = cs.tangentImpulse[1];
+                    oc.tangentImpulse = cs.tangentImpulse;
+                    oc.bitangentImpulse = cs.bitangentImpulse;
                 }
             }
         }
@@ -141,14 +124,18 @@ namespace Qu3e
                     c.normalMass = Invert(nm);
 
 
-                    for (int k = 0; k < 2; k++)
                     {
-                        Vec3 raCt = Vec3.Cross(cs.tangentVectors[k], c.ra);
-                        Vec3 rbCt = Vec3.Cross(cs.tangentVectors[k], c.rb);
+                        Vec3 raCt = Vec3.Cross(cs.tangentVectors, c.ra);
+                        Vec3 rbCt = Vec3.Cross(cs.tangentVectors, c.rb);
                         var tm = nm + Vec3.Dot(raCt, cs.iA * raCt) + Vec3.Dot(rbCt, cs.iB * rbCt);
-                        c.tangentMass[k] = Invert(tm);
+                        c.tangentMass = Invert(tm);
                     }
-                    
+                    {
+                        Vec3 raCt = Vec3.Cross(cs.bitangentVectors, c.ra);
+                        Vec3 rbCt = Vec3.Cross(cs.bitangentVectors, c.rb);
+                        var tm = nm + Vec3.Dot(raCt, cs.iA * raCt) + Vec3.Dot(rbCt, cs.iB * rbCt);
+                        c.bitangentMass = Invert(tm);
+                    }
 
                     // Precalculate bias factor
                     c.bias = -Q3_BAUMGARTE * (1 / dt) * Math.Min(0, c.penetration + Q3_PENETRATION_SLOP);
@@ -158,8 +145,8 @@ namespace Qu3e
 
                     if (EnableFriction)
                     {
-                        P += cs.tangentVectors[0] * c.tangentImpulse[0];
-                        P += cs.tangentVectors[1] * c.tangentImpulse[1];
+                        P += cs.tangentVectors * c.tangentImpulse;
+                        P += cs.bitangentVectors * c.bitangentImpulse;
                     }
 
                     vA -= P * cs.mA;
@@ -200,28 +187,45 @@ namespace Qu3e
                     // Friction
                     if (EnableFriction)
                     {
-
-                        for (int k = 0; k < 2; k++)
+                        
                         {
-                            double lambda = -Vec3.Dot(dv, cs.tangentVectors[k]) * c.tangentMass[k];
+                            double lambda = -Vec3.Dot(dv, cs.tangentVectors) * c.tangentMass;
 
                             // Calculate frictional impulse
                             double maxLambda = cs.friction * c.normalImpulse;
 
                             // Clamp frictional impulse
-                            double oldPT = c.tangentImpulse[k];
-                            c.tangentImpulse[k] = Clamp(-maxLambda, maxLambda, oldPT + lambda);
-                            lambda = c.tangentImpulse[k] - oldPT;
+                            double oldPT = c.tangentImpulse;
+                            c.tangentImpulse = Clamp(-maxLambda, maxLambda, oldPT + lambda);
+                            lambda = c.tangentImpulse - oldPT;
 
                             // Apply friction impulse
-                            Vec3 impulse = cs.tangentVectors[k] * lambda;
+                            Vec3 impulse = cs.tangentVectors * lambda;
                             vA -= impulse * cs.mA;
                             wA -= cs.iA * Vec3.Cross(c.ra, impulse);
 
                             vB += impulse * cs.mB;
                             wB += cs.iB * Vec3.Cross(c.rb, impulse);
                         }
-                       
+                        {
+                            double lambda = -Vec3.Dot(dv, cs.bitangentVectors) * c.bitangentMass;
+
+                            // Calculate frictional impulse
+                            double maxLambda = cs.friction * c.normalImpulse;
+
+                            // Clamp frictional impulse
+                            double oldPT = c.bitangentImpulse;
+                            c.bitangentImpulse = Clamp(-maxLambda, maxLambda, oldPT + lambda);
+                            lambda = c.bitangentImpulse - oldPT;
+
+                            // Apply friction impulse
+                            Vec3 impulse = cs.bitangentVectors * lambda;
+                            vA -= impulse * cs.mA;
+                            wA -= cs.iA * Vec3.Cross(c.ra, impulse);
+
+                            vB += impulse * cs.mB;
+                            wB += cs.iB * Vec3.Cross(c.rb, impulse);
+                        }
                     }
 
                     // Normal

@@ -44,8 +44,7 @@ namespace Qu3e
 
         public static void Assert(bool condition)
         {
-            if (!condition) throw new Exception("Assert results in false condition");
-            // System.Diagnostics.Debug.Assert(condition);
+            System.Diagnostics.Debug.Assert(condition);
         }
 
         // Restitution mixing. The idea is to use the maximum bounciness, so bouncy
